@@ -1,4 +1,4 @@
-.DS_Store
+DS_Store
 tmp*
 __*
 *.out
@@ -8,3 +8,6 @@ __*
 *.so
 ~*
 '*
+.ipynb_checkpoints
+.idea
+.vscode
