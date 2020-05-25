@@ -1,4 +1,4 @@
-//Author Ugo Vareto ugovaretto@gmail.com
+//Author Ugo Varetto ugovaretto@gmail.com
 //Minimal Zip iterator.
 //Example of how to use variadic templates, fold expressions and 
 //custom for(v: collection) loops.
