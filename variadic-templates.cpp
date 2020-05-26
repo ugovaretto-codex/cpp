@@ -74,7 +74,8 @@ struct Sequence<0, N...> {
 
 template <int Size, int Start = 0>
 struct MakeIndexSequence {
-    using Type = typename Sequence<Size, Start>::Index;
+    static_assert(Size > 0 && Start < Size);
+    using Type = typename Sequence<Size-1, Start>::Index;
 };
 
 template <int...I>
@@ -112,4 +113,5 @@ int main(int argc, char const* argv[]) {
     PrintIndices(MakeIndexSequence<4>::Type());
 
     return 0;
+    
 }
