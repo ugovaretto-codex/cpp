@@ -72,7 +72,7 @@ F constexpr end(pair<F, S> p) {return p.second;}
 
 int main(int argc, char const* argv[]) {
     vector<int> ints{1, 2, 3};
-    vector<string> strings{"1", "2", "3"};/*  */
+    vector<string> strings{"1", "2", "3"};
     
     Zipper zzip(begin(ints), begin(strings));
     Zipper zzend(end(ints), end(strings));
