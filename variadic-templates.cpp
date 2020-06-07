@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <tuple>
+#include <cmath>
 
 using namespace std;
 
@@ -11,36 +12,37 @@ struct ToInt {};
 
 template <>
 struct ToInt<float> {
-    using Type = int32_t;
+    using Type = uint32_t;
 };
 
 template <>
 struct ToInt<double> {
-    using Type = int64_t;
+    using Type = uint64_t;
 };
 
 template <typename IT>
 struct ToFloat {};
 
 template <>
-struct ToFloat<int32_t> {
+struct ToFloat<uint32_t> {
     using Type = float;
 };
 
 template <>
-struct ToFloat<int64_t> {
+struct ToFloat<uint64_t> {
     using Type = double;
 };
 
-template <typename FT, int I = 0>
+
+template <typename FT >
 union FloatIntConvert {
     using Float = FT;
-    using Int = typename ToInt<Float>::Type;
-    const Int int_;
+    using IntT = typename ToInt<Float>::Type;
+    const IntT int_;
     const Float float_;
-    constexpr FloatIntConvert(const Float f) : sfloat_(f) {}
-    constexpr FloatIntConvert(const Int i) : int_(i) {}
-    constexpr operator Int() const { return int_; }
+    constexpr FloatIntConvert(const Float f) : float_(f) {}
+    constexpr FloatIntConvert(const IntT i) : int_(i) {}
+    constexpr operator IntT() const { return int_; }
     constexpr operator Float() const { return float_; }
 };
 
@@ -189,7 +191,6 @@ struct MakeCustomIndexSequence {
 };
 
 //------------------------------------------------------------------------------
-
 template <int... I>
 void PrintIndices(const Idx<I...>& ii) {
     auto print = [=](auto i) {
@@ -205,6 +206,53 @@ void PrintIndices(const CustomIndex<I...>&) {
     (..., (cout << I << ", "));
     cout << endl;
 }
+
+#define i2f(es, m) (es << 23 | m)
+
+constexpr int NumBits(const uint32_t i) {
+    uint32_t mask = 1 << 31;
+    int count = 32;
+    while(!(mask & i)) {
+        --count;
+        mask >>= 1;
+    }
+    return count;
+}
+template <int B>
+struct Bi {
+    int n = B;
+    enum {bits=NumBits(B)};
+};
+
+constexpr uint32_t IntMantissa(const float f) {
+    const float m = f - float(uint32_t(f));
+    float fi = m * 10;
+    while(fi - uint32_t(fi) > 0.f) fi *= 10;
+    return uint32_t(fi);
+}
+
+int IntExponent(const float f) {
+    const float m = 1.0f + (f - uint32_t(f));
+    cout << f << " " << m << endl;
+    int e = -126;
+    while((pow(2, e) * m < f) && e <= 127) {
+    cout << pow(2, e) * m <<  " " << e << endl;
+    ++e;
+    }
+    return e;
+}
+
+constexpr uint32_t mask(int bits, int offset = 0) {
+    return (((1 << bits) ^ (1 << bits)) | 1 << bits) << offset;
+}
+
+// constexpr uint32_t IntFloat(const float f) {
+//     const uint32_t integral = uint32_t(f);
+//     const uint32_t mantissa = IntMantissa(f);
+// }
+// constexpr uint32_t FloatInt(const uint32_t sexp, const int mantissa) {
+//     (sexp - 0x7F) << 23 | mantiss << ()
+// }
 
 //------------------------------------------------------------------------------
 int main(int argc, char const* argv[]) {
@@ -233,9 +281,33 @@ int main(int argc, char const* argv[]) {
     using It = IndexType;
     PrintIndices(MakeCustomIndexSequence<10, Fibonacci, It(1), It(1)>::Type());
     //PrintIndices(MakeCustomIndexSequence<10, Div, F2I(120.45f),
-    //F2I(30.567f)>::Type()); //before this works they have to approve:
+    //F2I(30.567f)>::Type()); //in order for this to work they have to approve:
     //http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p1330r0.pdf
-    const int fi = F2I(1.345f);
-    cout << fi << endl;
+    //first
+    const int fi = F2I(1.0f);
+    cout << hex << fi << endl;
+
+    const uint32_t N = 124 << 23 | 1 << 21;
+    cout << I2F(i2f(uint32_t(0x7F),uint32_t(3) << 19)) << endl;
+    cout << I2F(N) << endl;
+    cout << NumBits(0x7f) << endl;
+    Bi<4> bs;
+    cout << bs.bits << endl;
+    cout << dec << IntMantissa(13.1234f) << endl;
+    const uint32_t im = IntMantissa(13.1234f);
+    cout << ((im >> 4) << 4) << endl;
+    cout << IntExponent(1.5625f) << endl;
+    cout << IntMantissa(1.5625f) << endl;
+    cout << NumBits(5625) << endl;
+    uint32_t f = 127 << 23 | 5625 << 9;
+    union U {
+        uint32_t i;
+        float f;
+    } u;
+    u.i = f;
+    cout << u.f << endl;
+    u.f = 1.5625f;
+    cout << hex << u.i << endl;
+    cout << 5625 << endl; 
     return 0;
 }
