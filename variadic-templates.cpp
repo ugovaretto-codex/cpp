@@ -235,12 +235,44 @@ int IntExponent(const float f) {
     const float m = 1.0f + (f - uint32_t(f));
     cout << f << " " << m << endl;
     int e = -126;
-    while((pow(2, e) * m < f) && e <= 127) {
-    cout << pow(2, e) * m <<  " " << e << endl;
-    ++e;
+    while(((1 << e) * m < f) && e <= 127) {
+        cout << ( 1 << e) * m <<  " " << e << endl;
+        ++e;
     }
     return e;
 }
+
+uint32_t IntFloat(const float f) {
+    //1) compute exponent
+
+    //2) loop: biggest exponent E : 2 ^ E <= f
+    const uint32_t sign = 1 << 31 & uint32_t(f);
+    uint32_t e = 0;
+    while((1 << e) < uint32_t(f)) ++e;
+    --e;
+    //3) mantissa = 0
+
+    //4) loop bit 0 -> 22: 2 ^ E x (1 + mantissa) -> F
+                // if f - F >= 0
+                //   mask |= 1 << (22-bit)
+                //   mantissa += 1/2^bit
+    float m = 0.f;
+    uint32_t mask = 0;
+    float r = (2 << e) * (1.0f + m);
+    for(int bit = 0; bit != 22; ++bit) {
+        if(r == f) break;
+        const float r2 = 2 << e * (1.0f + m);
+        if((f-r2) > 0 && (f-r2) < (f-r)) {
+            mask |= 1 << bit;
+            mantissa += (1.f / (1 << (bit + 1)));
+            r = r2;
+        }
+    }
+    //5) return sign | E | mask 
+    return sign | (e - 127) | mask;
+}
+
+
 
 constexpr uint32_t mask(int bits, int offset = 0) {
     return (((1 << bits) ^ (1 << bits)) | 1 << bits) << offset;
@@ -308,6 +340,5 @@ int main(int argc, char const* argv[]) {
     cout << u.f << endl;
     u.f = 1.5625f;
     cout << hex << u.i << endl;
-    cout << 5625 << endl; 
     return 0;
 }
