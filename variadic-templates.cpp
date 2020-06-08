@@ -250,22 +250,20 @@ constexpr void PrintBits(const T n, int start = 0,
     }
 }
 
-
 template <typename T>
 int Zeroes(const T n) {
     static_assert(is_floating_point<T>::value);
     int z = 0;
     T N = n - int64_t(n);
     N = N < 0 ? -N : N;
-    while(int64_t(N) == int64_t(10*N)) {
+    while (int64_t(N) == int64_t(10 * N)) {
         ++z;
         N = 10 * N;
     }
     return z;
 }
 
-
-//only works for abs(f) > = 1;
+// only works for abs(f) > = 1;
 constexpr uint32_t IntFloat(const float f) {
     // 1) compute exponent
     const float mantissa = f - (int(f));
@@ -305,8 +303,12 @@ constexpr uint32_t mask(int bits, int offset = 0) {
 // }
 template <uint32_t F>
 struct TF {
-    enum : uint32_t {value=F};
+    enum : uint32_t { value = F };
 };
+
+constexpr uint32_t operator"" _i(long double f) {
+    return IntFloat(float(f));
+}
 //------------------------------------------------------------------------------
 int main(int argc, char const* argv[]) {
 #if 0
@@ -361,15 +363,19 @@ int main(int argc, char const* argv[]) {
     } u;
     u.f = 11.5625f;
     cout << u.i << endl;
-    PrintBits(u.i); cout << endl;
+    PrintBits(u.i);
+    cout << endl;
     u.i = IntFloat(u.f);
     cout << u.i << endl;
-    PrintBits(u.i); cout << endl;
+    PrintBits(u.i);
+    cout << endl;
     TF<IntFloat(10.456f)> tf;
     cout << tf.value << endl;
     cout << Zeroes(1.00045f) << endl;
+    TF<10.456_i> tf2;
+    cout << tf2.value << endl;
     return 0;
 }
 
-//0 01111111 10010000000000000000000
-//1 10000001 10010000000000000000000
+// 0 01111111 10010000000000000000000
+// 1 10000001 10010000000000000000000
