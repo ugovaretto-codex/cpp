@@ -1,7 +1,7 @@
+#include <cmath>
 #include <iostream>
 #include <string>
 #include <tuple>
-#include <cmath>
 
 using namespace std;
 
@@ -33,8 +33,7 @@ struct ToFloat<uint64_t> {
     using Type = double;
 };
 
-
-template <typename FT >
+template <typename FT>
 union FloatIntConvert {
     using Float = FT;
     using IntT = typename ToInt<Float>::Type;
@@ -212,7 +211,7 @@ void PrintIndices(const CustomIndex<I...>&) {
 constexpr int NumBits(const uint32_t i) {
     uint32_t mask = 1 << 31;
     int count = 32;
-    while(!(mask & i)) {
+    while (!(mask & i)) {
         --count;
         mask >>= 1;
     }
@@ -221,13 +220,13 @@ constexpr int NumBits(const uint32_t i) {
 template <int B>
 struct Bi {
     int n = B;
-    enum {bits=NumBits(B)};
+    enum { bits = NumBits(B) };
 };
 
 constexpr uint32_t IntMantissa(const float f) {
     const float m = f - float(uint32_t(f));
     float fi = m * 10;
-    while(fi - uint32_t(fi) > 0.f) fi *= 10;
+    while (fi - uint32_t(fi) > 0.f) fi *= 10;
     return uint32_t(fi);
 }
 
@@ -235,44 +234,63 @@ int IntExponent(const float f) {
     const float m = 1.0f + (f - uint32_t(f));
     cout << f << " " << m << endl;
     int e = -126;
-    while(((1 << e) * m < f) && e <= 127) {
-        cout << ( 1 << e) * m <<  " " << e << endl;
+    while (((1 << e) * m < f) && e <= 127) {
+        cout << (1 << e) * m << " " << e << endl;
         ++e;
     }
     return e;
 }
-
-uint32_t IntFloat(const float f) {
-    //1) compute exponent
-
-    //2) loop: biggest exponent E : 2 ^ E <= f
-    const uint32_t sign = 1 << 31 & uint32_t(f);
-    uint32_t e = 0;
-    while((1 << e) < uint32_t(f)) ++e;
-    --e;
-    //3) mantissa = 0
-
-    //4) loop bit 0 -> 22: 2 ^ E x (1 + mantissa) -> F
-                // if f - F >= 0
-                //   mask |= 1 << (22-bit)
-                //   mantissa += 1/2^bit
-    float m = 0.f;
-    uint32_t mask = 0;
-    float r = (2 << e) * (1.0f + m);
-    for(int bit = 0; bit != 22; ++bit) {
-        if(r == f) break;
-        const float r2 = 2 << e * (1.0f + m);
-        if((f-r2) > 0 && (f-r2) < (f-r)) {
-            mask |= 1 << bit;
-            mantissa += (1.f / (1 << (bit + 1)));
-            r = r2;
-        }
+template <typename T>
+constexpr void PrintBits(const T n, int start = 0,
+                         const int end = 8 * sizeof(T) - 1) {
+    static_assert(is_integral<T>::value);
+    for (int i = end; i >= start; --i) {
+        const int v = (n & (1 << i)) >> i;
+        cout << v;
     }
-    //5) return sign | E | mask 
-    return sign | (e - 127) | mask;
 }
 
 
+template <typename T>
+int Zeroes(const T n) {
+    static_assert(is_floating_point<T>::value);
+    int z = 0;
+    T N = n - int64_t(n);
+    N = N < 0 ? -N : N;
+    while(int64_t(N) == int64_t(10*N)) {
+        ++z;
+        N = 10 * N;
+    }
+    return z;
+}
+
+
+//only works for abs(f) > = 1;
+constexpr uint32_t IntFloat(const float f) {
+    // 1) compute exponent
+    const float mantissa = f - (int(f));
+    // 2) loop: biggest exponent E : 2 ^ E <= f
+    const uint32_t sign = 1 << 31 & uint32_t(f);
+    int e = 0;
+    const float F = f < 0 ? -f : f;
+    while ((1 << e) < uint32_t(F)) ++e;
+    e = e > 0 ? e - 1 : 0;
+    float N = 1 << e;
+    float m = 0.f;
+    uint32_t mask = 0;
+    for (int bit = 1; bit != 24; ++bit) {
+        const int b = bit;
+        const float r = 1.f / (1 << b);
+        const float n = N * (1.f + m + r);
+        if (f - n >= 0) {
+            mask |= 1 << (23 - bit);
+            m += r;
+        }
+        if (f == n) break;
+    }
+    const uint32_t x = ((e + 127) & 0x000000FF) << 23;
+    return sign | x | mask;
+}
 
 constexpr uint32_t mask(int bits, int offset = 0) {
     return (((1 << bits) ^ (1 << bits)) | 1 << bits) << offset;
@@ -285,9 +303,13 @@ constexpr uint32_t mask(int bits, int offset = 0) {
 // constexpr uint32_t FloatInt(const uint32_t sexp, const int mantissa) {
 //     (sexp - 0x7F) << 23 | mantiss << ()
 // }
-
+template <uint32_t F>
+struct TF {
+    enum : uint32_t {value=F};
+};
 //------------------------------------------------------------------------------
 int main(int argc, char const* argv[]) {
+#if 0
     Iterate([](const int& i) { cout << i << endl; }, 1, 2, 3, 4, 5, 6, 7);
 
     Iterate2([](const int& i) { cout << i << endl; }, 1, 2, 3, 4, 5, 6, 7);
@@ -312,15 +334,15 @@ int main(int argc, char const* argv[]) {
     cout << "=========================" << endl;
     using It = IndexType;
     PrintIndices(MakeCustomIndexSequence<10, Fibonacci, It(1), It(1)>::Type());
-    //PrintIndices(MakeCustomIndexSequence<10, Div, F2I(120.45f),
-    //F2I(30.567f)>::Type()); //in order for this to work they have to approve:
-    //http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p1330r0.pdf
-    //first
+    // PrintIndices(MakeCustomIndexSequence<10, Div, F2I(120.45f),
+    // F2I(30.567f)>::Type()); //in order for this to work they have to approve:
+    // http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p1330r0.pdf
+    // first
     const int fi = F2I(1.0f);
     cout << hex << fi << endl;
 
     const uint32_t N = 124 << 23 | 1 << 21;
-    cout << I2F(i2f(uint32_t(0x7F),uint32_t(3) << 19)) << endl;
+    cout << I2F(i2f(uint32_t(0x7F), uint32_t(3) << 19)) << endl;
     cout << I2F(N) << endl;
     cout << NumBits(0x7f) << endl;
     Bi<4> bs;
@@ -332,13 +354,22 @@ int main(int argc, char const* argv[]) {
     cout << IntMantissa(1.5625f) << endl;
     cout << NumBits(5625) << endl;
     uint32_t f = 127 << 23 | 5625 << 9;
+#endif
     union U {
         uint32_t i;
         float f;
     } u;
-    u.i = f;
-    cout << u.f << endl;
-    u.f = 1.5625f;
-    cout << hex << u.i << endl;
+    u.f = 11.5625f;
+    cout << u.i << endl;
+    PrintBits(u.i); cout << endl;
+    u.i = IntFloat(u.f);
+    cout << u.i << endl;
+    PrintBits(u.i); cout << endl;
+    TF<IntFloat(10.456f)> tf;
+    cout << tf.value << endl;
+    cout << Zeroes(1.00045f) << endl;
     return 0;
 }
+
+//0 01111111 10010000000000000000000
+//1 10000001 10010000000000000000000
