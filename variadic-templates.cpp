@@ -206,6 +206,13 @@ void PrintIndices(const CustomIndex<I...>&) {
     cout << endl;
 }
 
+template <typename F, IndexType... I>
+void PrintXIndices(const F& f, const CustomIndex<I...>&) {
+    // using fold expression
+    (..., (cout << f(I) << ", "));
+    cout << endl;
+}
+
 #define i2f(es, m) (es << 23 | m)
 
 constexpr int NumBits(const uint32_t i) {
@@ -223,23 +230,6 @@ struct Bi {
     enum { bits = NumBits(B) };
 };
 
-constexpr uint32_t IntMantissa(const float f) {
-    const float m = f - float(uint32_t(f));
-    float fi = m * 10;
-    while (fi - uint32_t(fi) > 0.f) fi *= 10;
-    return uint32_t(fi);
-}
-
-int IntExponent(const float f) {
-    const float m = 1.0f + (f - uint32_t(f));
-    cout << f << " " << m << endl;
-    int e = -126;
-    while (((1 << e) * m < f) && e <= 127) {
-        cout << (1 << e) * m << " " << e << endl;
-        ++e;
-    }
-    return e;
-}
 template <typename T>
 constexpr void PrintBits(const T n, int start = 0,
                          const int end = 8 * sizeof(T) - 1) {
@@ -251,7 +241,7 @@ constexpr void PrintBits(const T n, int start = 0,
 }
 
 template <typename T>
-int Zeroes(const T n) {
+constexpr int Zeros(const T n) {
     static_assert(is_floating_point<T>::value);
     int z = 0;
     T N = n - int64_t(n);
@@ -263,52 +253,110 @@ int Zeroes(const T n) {
     return z;
 }
 
-// only works for abs(f) > = 1;
+template <typename T>
+constexpr int Zerobits(const T n) {
+    static_assert(is_literal_type<T>::value);
+    // int cnt = 0;
+    const int end = 8 * sizeof(T) - 1;
+    int zeros = 0;
+    for (int cnt = end; cnt >= 0; cnt--) {
+        if (((n & (1 << cnt)) >> cnt) == 0)
+            ++zeros;
+        else
+            break;
+    }
+    return zeros;  // cnt > 0 ? cnt - 1: 0;
+}
+
+// denormalization not supported, only floating point numbers with integer
+// part in signed 32 bit integer range supported
+// Algorithm, given floating point number F:
+// 1) extract sign, integer part, mantissa
+// 2) compute exponent E:
+//  2.1) if integer part >= 1 keep on incrementing the exponent E
+//       until 2^E < Integer(F), then decrement E to find the biggest exponent
+//       for which 2^E < F
+//  2.2) if integer part == 0 keep on incrementing the exponent E
+//       until 1/2^E > Mantissa(F)
+// 3) compute mantissa, F' = |F|:
+//  3.0) initialize number N to 2^E or 2^(-E) if number < 1,
+//       mantissa and mask to 0
+//  3.1) for each bit from position 22 to 0, while N != F:
+//         if N * (1 + mantissa + 1/2^bit_i) <= F'
+//           set bit i in mask to 1
+//           mantissa = mantissa + 1/2^bit_i
+//           N = N * (1 + mantissa + 1/2^bit_i)
+// 4) if |F| < 1 exponent is negative: E = -E
+// 5) return bitwise or of (sign << 31, E + 127 << 23, mantissa)
+// As per IEEE754 specification 127 is subtracted from exponent value, so
+// it needs to be added back
 constexpr uint32_t IntFloat(const float f) {
-    // 1) compute exponent
-    const float mantissa = f - (int(f));
-    // 2) loop: biggest exponent E : 2 ^ E <= f
-    const uint32_t sign = 1 << 31 & uint32_t(f);
-    int e = 0;
-    const float F = f < 0 ? -f : f;
-    while ((1 << e) < uint32_t(F)) ++e;
-    e = e > 0 ? e - 1 : 0;
-    float N = 1 << e;
+    const uint32_t S = 1 << 31 & uint32_t(f);
+    uint32_t I = S ? -int32_t(f) : int32_t(f);
+    float M = S ? I - f : f - I;
+    int E = 0;
+    if (I > 0) {
+        while ((1 << E) < I) ++E;
+        E = E > 0 ? E - 1 : 0;
+    } else {
+        E = 1;
+        while (1.f / (1 << E) > M) ++E;
+    }
+    const float F = I + M;
+    float N = I > 0 ? 1 << E : (1.f / (1 << E));
     float m = 0.f;
     uint32_t mask = 0;
     for (int bit = 1; bit != 24; ++bit) {
-        const int b = bit;
-        const float r = 1.f / (1 << b);
+        const float r = 1.f / (1 << bit);
         const float n = N * (1.f + m + r);
-        if (f - n >= 0) {
+        if (F - n >= 0) {
             mask |= 1 << (23 - bit);
             m += r;
         }
-        if (f == n) break;
+        if (F == n) break;
     }
-    const uint32_t x = ((e + 127) & 0x000000FF) << 23;
-    return sign | x | mask;
+    E = I > 0 ? E : -E;
+    const uint32_t x = ((E + 127) & 0x000000FF) << 23;
+    return S | x | mask;
+}
+
+constexpr float FloatInt(const uint32_t i) {
+    const float sign = 0x80000000 & i ? -1.f : 1.f;
+    int e = ((i >> 23) & 0x00000FF) - 127;
+    const float factor = e > 0 ? 1 << e : 1.f / (1 << -e);
+    float m = 0.f;
+    for (int bit = 0; bit != 23; ++bit) {
+        const int offset = 22 - bit;
+        const int b = (i & (1 << offset)) >> offset;
+        if (b) m += 1.f / (1 << (offset + 1));
+    }
+    return sign * factor * (1.f + m);
 }
 
 constexpr uint32_t mask(int bits, int offset = 0) {
     return (((1 << bits) ^ (1 << bits)) | 1 << bits) << offset;
 }
 
-// constexpr uint32_t IntFloat(const float f) {
-//     const uint32_t integral = uint32_t(f);
-//     const uint32_t mantissa = IntMantissa(f);
-// }
-// constexpr uint32_t FloatInt(const uint32_t sexp, const int mantissa) {
-//     (sexp - 0x7F) << 23 | mantiss << ()
-// }
 template <uint32_t F>
 struct TF {
     enum : uint32_t { value = F };
 };
 
-constexpr uint32_t operator"" _i(long double f) {
-    return IntFloat(float(f));
-}
+constexpr uint32_t operator"" _f(long double f) { return IntFloat(float(f)); }
+
+template <IndexType... ArgsT>
+struct Div2 {
+    enum E1 : IndexType {
+        second = E1(NthElement<sizeof...(ArgsT) - 2, ArgsT...>::value)
+    };
+    enum E2 : IndexType {
+        first = E2(NthElement<sizeof...(ArgsT) - 1, ArgsT...>::value)
+    };
+    enum V : IndexType {
+        value = IntFloat(FloatInt(V(first)) / FloatInt(V(second)))
+    };
+};
+
 //------------------------------------------------------------------------------
 int main(int argc, char const* argv[]) {
 #if 0
@@ -371,9 +419,26 @@ int main(int argc, char const* argv[]) {
     cout << endl;
     TF<IntFloat(10.456f)> tf;
     cout << tf.value << endl;
-    cout << Zeroes(1.00045f) << endl;
-    TF<10.456_i> tf2;
+    cout << Zeros(1.00045f) << endl;
+    TF<10.456_f> tf2;
     cout << tf2.value << endl;
+    u.f = 999999999.000001;
+    PrintBits(u.i);
+    cout << endl;
+    PrintBits(IntFloat(u.f));
+    cout << endl;
+    u.f = 0.0000001;
+    PrintBits(u.i);
+    cout << endl;
+    PrintBits(IntFloat(u.f));
+    cout << endl;
+    cout << Zerobits(0x7F) << endl;
+    u.f = 10.1234;
+    cout << FloatInt(u.i) << endl;
+    using It = IndexType;
+    PrintXIndices([](IndexType i) {return FloatInt(i);},
+        MakeCustomIndexSequence<10, Div2, IntFloat(1.3f),
+                                         IntFloat(10.0f)>::Type());
     return 0;
 }
 
