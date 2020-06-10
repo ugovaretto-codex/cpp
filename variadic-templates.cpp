@@ -269,10 +269,11 @@ constexpr int Zerobits(const T n) {
 }
 
 //------------------------------------------------------------------------------
-// Convert 32 bit floating point number to 32 bit unsigned int.
+// Convert 32 bit floating point number to 32 bit unsigned int. Can be used
+// in template parameter list or any other scope requiring a constexpr.
 // bits:
 // |31  |30........23|22.....0|
-//   ^        ^          ^    
+//   ^        ^          ^
 // |sign|exponent-127|mantissa|
 // F = -1^sign x 2^exponent x 1. mantissa : normalized, x 1.****
 // denormalized: exponent = 0, F = -1^sign x 2^-126 * 0.mantissa
@@ -299,9 +300,9 @@ constexpr int Zerobits(const T n) {
 // As per IEEE754 specification 127 is subtracted from exponent value, so
 // it needs to be added back
 constexpr uint32_t IntFloat(const float f) {
-    const uint32_t S = 1 << 31 & int32_t(f);
+    const uint32_t S = (1 << 31) & int32_t(f);
     uint32_t I = S ? -int32_t(f) : int32_t(f);
-    float M = S ? I - f : f - I;
+    float M = S ? -f - I: f - I;
     int E = 0;
     if (I > 0) {
         while ((1 << E) < I) ++E;
@@ -324,16 +325,19 @@ constexpr uint32_t IntFloat(const float f) {
         if (F == n) break;
     }
     E = I > 0 ? E : -E;
-    const uint32_t x = ((E + 127) & 0x000000FF) << 23;
+    const uint32_t x = ((E + 127) & 0x0000000FF) << 23;
     return S | x | mask;
 }
 
+//------------------------------------------------------------------------------
 // Convert 32 bit unsigned integer to 32 bit floating point number.
-// Extract sign and exponent and sum bits in 
-// mantissa (1/2^(22-bit position + 1))
+// Can be used in template parameter list or any other scope requiring
+// a constexpr.
+// Extract sign and exponent and sum bits in
+// mantissa (sum of 1/2^(22-bit position + 1)) where bit position in [0,22]
 constexpr float FloatInt(const uint32_t i) {
-    const float sign = 0x80000000 & i ? -1.f : 1.f;
-    int e = ((i >> 23) & 0x0000FFFF) - 127;
+    const float sign = (1 << 31) & i ? -1.f : 1.f;
+    int e = (((i & 0x7FFFFFFF) >> 23) & 0x000000FF) - 127;
     const float factor = e > 0 ? 1 << e : 1.f / (1 << -e);
     float m = 0.f;
     for (int bit = 0; bit != 23; ++bit) {

@@ -67,7 +67,7 @@ constexpr uint32_t IntFloat(const float f) {
         if (F == n) break;
     }
     E = I > 0 ? E : -E;
-    const uint32_t x = ((E + 127) & 0x000000FF) << 23;
+    const uint32_t x = ((E + 127) & 0x0000000FF) << 23;
     return S | x | mask;
 }
 
@@ -79,7 +79,7 @@ constexpr uint32_t IntFloat(const float f) {
 // mantissa (sum of 1/2^(22-bit position + 1)) where bit position in [0,22]
 constexpr float FloatInt(const uint32_t i) {
     const float sign = (1 << 31) & i ? -1.f : 1.f;
-    int e = (((i & 0x7FFFFFFF) >> 23) & 0x0000FFFF) - 127;
+    int e = (((i & 0x7FFFFFFF) >> 23) & 0x000000FF) - 127;
     const float factor = e > 0 ? 1 << e : 1.f / (1 << -e);
     float m = 0.f;
     for (int bit = 0; bit != 23; ++bit) {
