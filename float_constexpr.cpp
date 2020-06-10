@@ -41,6 +41,7 @@ using namespace std;
 // 5) return bitwise or of (sign << 31, E + 127 << 23, mantissa)
 // As per IEEE754 specification 127 is subtracted from exponent value, so
 // it needs to be added back
+// No encoding for NaN, subnormals or infinite yet
 constexpr uint32_t IntFloat(const float f) {
     const uint32_t S = (1 << 31) & int32_t(f);
     uint32_t I = S ? -int32_t(f) : int32_t(f);
@@ -77,6 +78,7 @@ constexpr uint32_t IntFloat(const float f) {
 // a constexpr.
 // Extract sign and exponent and sum bits in
 // mantissa (sum of 1/2^(22-bit position + 1)) where bit position in [0,22]
+// No decoding for NaN, subnormals or infinite yet
 constexpr float FloatInt(const uint32_t i) {
     const float sign = (1 << 31) & i ? -1.f : 1.f;
     int e = (((i & 0x7FFFFFFF) >> 23) & 0x000000FF) - 127;

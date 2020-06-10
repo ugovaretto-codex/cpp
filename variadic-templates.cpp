@@ -268,6 +268,41 @@ constexpr int Zerobits(const T n) {
     return zeros;  // cnt > 0 ? cnt - 1: 0;
 }
 
+template <typename T>
+struct FloatTraits {};
+
+template <>
+struct FloatTraits<float> {
+    enum : int32_t {SIGN_BIT=31, MANTISSA_LENGTH=23, EXP_LENGTH=8};
+    //after right shift
+    enum : uint32_t {BIT_MASK=0x80000000, 
+                     MANTISSA_MASK=0x007FFFFF, 
+                     EXP_MASK=0x000000FF};
+    enum : int32_t {EXP_OFFSET=127};
+    enum : int32_t {MIN_EXP=126};
+    enum : uint32_t {POSITIVE_INFINITE=0x7F800000, 
+                     NEGATIVE_INFINITE=0xFF800000};
+    using IntType = int32_t;
+    using UIntType = uint32_t;
+};
+
+template <>
+struct FloatTraits<double> {
+    enum : int64_t {SIGN_BIT=63, MANTISSA_LENGTH=52, EXP_LENGTH=11};
+    //after right shift
+    enum : uint64_t {BIT_MASK=0x8000000000000000,
+                     MANTISSA_MASK=0x000FFFFFFFFFFFFF, 
+                     EXP_MASK=0x00000000000003FF};
+    enum : int64_t  {EXP_OFFSET=1023};
+    enum : int64_t  {MIN_EXP=1022};
+    enum : uint64_t {POSITIVE_INFINITE=0x7FF0000000000000, 
+                     NEGATIVE_INFINITE=0xFFF0000000000000};
+    using IntType = int64_t;
+    using UIntType = uint64_t;
+};
+
+
+
 //------------------------------------------------------------------------------
 // Convert 32 bit floating point number to 32 bit unsigned int. Can be used
 // in template parameter list or any other scope requiring a constexpr.
@@ -298,11 +333,11 @@ constexpr int Zerobits(const T n) {
 // 4) if |F| < 1 exponent is negative: E = -E
 // 5) return bitwise or of (sign << 31, E + 127 << 23, mantissa)
 // As per IEEE754 specification 127 is subtracted from exponent value, so
-// it needs to be added back
+// it needs to be added
 constexpr uint32_t IntFloat(const float f) {
     const uint32_t S = (1 << 31) & int32_t(f);
     uint32_t I = S ? -int32_t(f) : int32_t(f);
-    float M = S ? -f - I: f - I;
+    float M = S ? -f - I : f - I;
     int E = 0;
     if (I > 0) {
         while ((1 << E) < I) ++E;
@@ -314,19 +349,19 @@ constexpr uint32_t IntFloat(const float f) {
     const float F = I + M;
     float N = I > 0 ? 1 << E : (1.f / (1 << E));
     float m = 0.f;
-    uint32_t mask = 0;
+    uint32_t mantissa = 0;
     for (int bit = 1; bit != 24; ++bit) {
         const float r = 1.f / (1 << bit);
         const float n = N * (1.f + m + r);
         if (F - n >= 0) {
-            mask |= 1 << (23 - bit);
+            mantissa |= 1 << (23 - bit);
             m += r;
         }
         if (F == n) break;
     }
     E = I > 0 ? E : -E;
-    const uint32_t x = ((E + 127) & 0x0000000FF) << 23;
-    return S | x | mask;
+    const uint32_t X = ((E + 127) & 0x0000000FF) << 23;
+    return S | X | mantissa;
 }
 
 //------------------------------------------------------------------------------
@@ -339,14 +374,15 @@ constexpr float FloatInt(const uint32_t i) {
     const float sign = (1 << 31) & i ? -1.f : 1.f;
     int e = (((i & 0x7FFFFFFF) >> 23) & 0x000000FF) - 127;
     const float factor = e > 0 ? 1 << e : 1.f / (1 << -e);
-    float m = 0.f;
+    float mantissa = 0.f;
     for (int bit = 0; bit != 23; ++bit) {
         const int offset = 22 - bit;
         const int b = (i & (1 << offset)) >> offset;
-        if (b) m += 1.f / (1 << (bit + 1));
+        if (b) mantissa += 1.f / (1 << (bit + 1));
     }
-    return sign * factor * (1.f + m);
+    return sign * factor * (1.f + mantissa);
 }
+
 
 //------------------------------------------------------------------------------
 constexpr uint32_t mask(int bits, int offset = 0) {
