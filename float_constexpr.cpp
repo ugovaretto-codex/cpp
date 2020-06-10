@@ -1,6 +1,6 @@
 //
-// constexpr float <--> int bitwise conversion, compatible with non-type
-// template parameters: MyType<IntFloat(1.345f)> mt;
+// constexpr 32 bit float <--> 32 bit int bitwise conversion, compatible with
+// non-type template parameters: MyType<IntFloat(1.345f)> mt; 
 // Author: Ugo Varetto
 //
 
@@ -44,7 +44,7 @@ using namespace std;
 constexpr uint32_t IntFloat(const float f) {
     const uint32_t S = (1 << 31) & int32_t(f);
     uint32_t I = S ? -int32_t(f) : int32_t(f);
-    float M = S ? -f - I: f - I;
+    float M = S ? -f - I : f - I;
     int E = 0;
     if (I > 0) {
         while ((1 << E) < I) ++E;
@@ -108,9 +108,11 @@ void PrintBits(const T n, int start = 0, const int end = 8 * sizeof(T) - 1) {
 }
 
 //------------------------------------------------------------------------------
-//WARNING: user defined literals for numeric types require the argument to
-//always be positive
+// WARNING: user defined literals for numeric types require the argument to
+// always be positive, use _nf for negative numbers
 constexpr uint32_t operator"" _f(long double v) { return IntFloat(float(v)); }
+// convert float to negative int
+constexpr uint32_t operator"" _nf(long double v) { return IntFloat(float(-v)); }
 
 //------------------------------------------------------------------------------
 int main(int argc, char const *argv[]) {
@@ -118,7 +120,6 @@ int main(int argc, char const *argv[]) {
         uint32_t i;
         float f;
     } u;
-
     U fi;
     fi.f = -10.234f;
     assert(fi.i == IntFloat(fi.f));
@@ -127,9 +128,7 @@ int main(int argc, char const *argv[]) {
     PrintBits(fi.i);
     cout << endl;
     cout << "uint32_t:     " << fi.i << endl;
-
     Float<10.234_f> f;
     assert(float(f) == 10.234f);
-
     return 0;
 }
