@@ -1,6 +1,6 @@
 //
 // constexpr float <--> int bitwise conversion, compatible with non-type
-// template parameters.
+// template parameters: MyType<IntFloat(1.345f)> mt;
 // Author: Ugo Varetto
 //
 
