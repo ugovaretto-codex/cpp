@@ -268,6 +268,14 @@ constexpr int Zerobits(const T n) {
     return zeros;  // cnt > 0 ? cnt - 1: 0;
 }
 
+//------------------------------------------------------------------------------
+// Convert 32 bit floating point number to 32 bit unsigned int.
+// bits:
+// |31  |30........23|22.....0|
+//   ^        ^          ^    
+// |sign|exponent-127|mantissa|
+// F = -1^sign x 2^exponent x 1. mantissa : normalized, x 1.****
+// denormalized: exponent = 0, F = -1^sign x 2^-126 * 0.mantissa
 // denormalization not supported, only floating point numbers with integer
 // part in signed 32 bit integer range supported
 // Algorithm, given floating point number F:
@@ -291,7 +299,7 @@ constexpr int Zerobits(const T n) {
 // As per IEEE754 specification 127 is subtracted from exponent value, so
 // it needs to be added back
 constexpr uint32_t IntFloat(const float f) {
-    const uint32_t S = 1 << 31 & uint32_t(f);
+    const uint32_t S = 1 << 31 & int32_t(f);
     uint32_t I = S ? -int32_t(f) : int32_t(f);
     float M = S ? I - f : f - I;
     int E = 0;
@@ -320,19 +328,23 @@ constexpr uint32_t IntFloat(const float f) {
     return S | x | mask;
 }
 
+// Convert 32 bit unsigned integer to 32 bit floating point number.
+// Extract sign and exponent and sum bits in 
+// mantissa (1/2^(22-bit position + 1))
 constexpr float FloatInt(const uint32_t i) {
     const float sign = 0x80000000 & i ? -1.f : 1.f;
-    int e = ((i >> 23) & 0x00000FF) - 127;
+    int e = ((i >> 23) & 0x0000FFFF) - 127;
     const float factor = e > 0 ? 1 << e : 1.f / (1 << -e);
     float m = 0.f;
     for (int bit = 0; bit != 23; ++bit) {
         const int offset = 22 - bit;
         const int b = (i & (1 << offset)) >> offset;
-        if (b) m += 1.f / (1 << (offset + 1));
+        if (b) m += 1.f / (1 << (bit + 1));
     }
     return sign * factor * (1.f + m);
 }
 
+//------------------------------------------------------------------------------
 constexpr uint32_t mask(int bits, int offset = 0) {
     return (((1 << bits) ^ (1 << bits)) | 1 << bits) << offset;
 }
