@@ -6,57 +6,6 @@
 using namespace std;
 
 //------------------------------------------------------------------------------
-// Compile-time float <--> int bitwise conversion
-template <typename FT>
-struct ToInt {};
-
-template <>
-struct ToInt<float> {
-    using Type = uint32_t;
-};
-
-template <>
-struct ToInt<double> {
-    using Type = uint64_t;
-};
-
-template <typename IT>
-struct ToFloat {};
-
-template <>
-struct ToFloat<uint32_t> {
-    using Type = float;
-};
-
-template <>
-struct ToFloat<uint64_t> {
-    using Type = double;
-};
-
-template <typename FT>
-union FloatIntConvert {
-    using Float = FT;
-    using IntT = typename ToInt<Float>::Type;
-    const IntT int_;
-    const Float float_;
-    constexpr FloatIntConvert(const Float f) : float_(f) {}
-    constexpr FloatIntConvert(const IntT i) : int_(i) {}
-    constexpr operator IntT() const { return int_; }
-    constexpr operator Float() const { return float_; }
-};
-
-//------------------------------------------------------------------------------
-template <typename FloatT>
-constexpr typename ToInt<FloatT>::Type F2I(const FloatT f) {
-    return FloatIntConvert<FloatT>(f);
-}
-
-template <typename IntT>
-constexpr typename ToFloat<IntT>::Type I2F(const IntT i) {
-    return FloatIntConvert<typename ToFloat<IntT>::Type>(i).float_;
-}
-
-//------------------------------------------------------------------------------
 namespace {
 template <typename F>
 void IterateImpl(F) {}
