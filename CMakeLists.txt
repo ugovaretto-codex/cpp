@@ -9,19 +9,12 @@ endif()
 project(cppscratch VERSION 1.0
                    DESCRIPTION "C++ scratchpad"
                    LANGUAGES CXX)
-#packages
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-find_package(Threads REQUIRED)
 
 # Separate debug-release paths
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/bin/debug)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/bin/release)
 
-add_executable(cache cache.cpp)
-set_property(TARGET cache
-             PROPERTY CXX_STANDARD 17)   
-target_link_libraries(cache PRIVATE Threads::Threads)     
-
+# Targets
 add_executable(index_sequence index_sequence.cpp)
 set_property(TARGET index_sequence
              PROPERTY CXX_STANDARD 17)   
@@ -34,13 +27,12 @@ add_executable(variadic_templates variadic-templates.cpp)
 set_property(TARGET variadic_templates
              PROPERTY CXX_STANDARD 17)  
 
-# get_target_property(TEMP ${THE_TARGET} COMPILE_FLAGS)
-# if(TEMP STREQUAL "TEMP-NOTFOUND")
-#   SET(TEMP "") # Set to empty string
-# else()
-#   SET(TEMP "${TEMP} ") # A space to cleanly separate from existing content
-# endif()
-# # Append our values
-# SET(TEMP "${TEMP}${GCC_COVERAGE_COMPILE_FLAGS}" )
-# set_target_properties(${THE_TARGET} PROPERTIES COMPILE_FLAGS ${TEMP} )
+add_executable(zip-variadic-fold zip-variadic-fold.cpp)
+set_property(TARGET zip-variadic-fold
+            PROPERTY CXX_STANDARD 17)
 
+add_executable(float_constexpr float_constexpr.cpp)
+set_property(TARGET float_constexpr                
+             PROPERTY CXX_STANDARD 17)  
+            
+             

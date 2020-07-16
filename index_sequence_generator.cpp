@@ -71,6 +71,7 @@ struct Fibonacci {  // generate next number in Fibonacci sequence
     };
 };
 
+
 template <int Size, int Start = 0>
 using IndexSequence =
     typename GenerateIndexSequence<Size, Inc, Start>::Type;
@@ -79,7 +80,9 @@ template <int Size>
 using FibonacciSequence =
     typename GenerateIndexSequence<Size, Fibonacci, 1, 1>::Type;
 
-
+template <int Size, int First, int Second>
+using RemainderSequence =
+    typename GenerateIndexSequence<Size, Remainder, First, Second>::Type;
 
 
 #if __cplusplus >= 201703L

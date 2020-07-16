@@ -140,7 +140,7 @@ struct MakeCustomIndexSequence {
 
 //------------------------------------------------------------------------------
 template <int... I>
-void PrintIndices(const Idx<I...>& ii) {
+void PrintIndices(const Idx<I...>& = Idx<I...>()) {
     auto print = [=](auto i) {
         cout << i << endl;
         return 0;
@@ -149,10 +149,20 @@ void PrintIndices(const Idx<I...>& ii) {
 }
 
 template <IndexType... I>
-void PrintIndices(const CustomIndex<I...>&) {
+void PrintIndices(const CustomIndex<I...>& = CustomIndex<I...>()) {
     // using fold expression
     (..., (cout << I << ", "));
     cout << endl;
+}
+
+template <int... I>
+void PrintIndices2(const Idx<I...>& = Idx<I...>()) {
+    auto print = [=](auto i) {
+        cout << i << endl;
+        return i;
+    };
+    const int expand[sizeof...(I)] = {print(I)...};
+    
 }
 
 template <typename F, IndexType... I>
@@ -358,6 +368,7 @@ struct Div2 {
     };
 };
 
+
 //------------------------------------------------------------------------------
 int main(int argc, char const* argv[]) {
 #if 0
@@ -440,6 +451,9 @@ int main(int argc, char const* argv[]) {
     PrintXIndices([](IndexType i) {return FloatInt(i);},
         MakeCustomIndexSequence<10, Div2, IntFloat(1.3f),
                                          IntFloat(10.0f)>::Type());
+
+
+    PrintIndices2<1,2,3,4>();
     return 0;
 }
 
