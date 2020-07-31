@@ -30,7 +30,7 @@ using namespace std;
 template <typename H, typename... T>
 struct Tuple : Tuple<T...> {
     H val;
-    constexpr Tuple(const H& h, const T&... t) : Tuple<T...>(t...), val(h) {}
+    Tuple(const H& h, const T&... t) : Tuple<T...>(t...), val(h) {}
     Tuple& operator=(const Tuple& other) {
         val = other.val;
         Tuple<T...>::operator=((const Tuple<T...>&)other);
@@ -41,7 +41,7 @@ struct Tuple : Tuple<T...> {
 template <typename T>
 struct Tuple<T> {
     T val;
-    constexpr Tuple(const T& v) : val(v) {}
+    Tuple(const T& v) : val(v) {}
     Tuple& operator=(const Tuple& other) {
         val = other.val;
         return *this;
