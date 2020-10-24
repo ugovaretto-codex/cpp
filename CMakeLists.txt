@@ -34,9 +34,12 @@ set_property(TARGET zip-variadic-fold
 add_executable(float_constexpr float_constexpr.cpp)
 set_property(TARGET float_constexpr                
              PROPERTY CXX_STANDARD 17) 
-             
+
+add_executable(vector_allocation vector_allocation.cpp)             
+
 add_executable(tuple tuple.cpp)
 set_property(TARGET tuple                
             PROPERTY CXX_STANDARD 20) 
+
             
              
