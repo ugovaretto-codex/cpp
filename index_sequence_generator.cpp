@@ -71,6 +71,16 @@ struct Fibonacci {  // generate next number in Fibonacci sequence
     };
 };
 
+template <int... I>
+struct Remainder {  // generate next number in Fibonacci sequence
+    static_assert(sizeof...(I) > 1,
+                  "Remainder requirese sequenze size > 1");
+    enum : int {
+        value = Nth<sizeof...(I) - 2, I...>::value %
+                Nth<sizeof...(I) - 1, I...>::value
+    };
+};
+
 
 template <int Size, int Start = 0>
 using IndexSequence =

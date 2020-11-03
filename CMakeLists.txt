@@ -41,5 +41,8 @@ add_executable(tuple tuple.cpp)
 set_property(TARGET tuple                
             PROPERTY CXX_STANDARD 20) 
 
+add_executable(tuple2 tuple2.cpp)
+set_property(TARGET tuple2             
+            PROPERTY CXX_STANDARD 20)
             
              
