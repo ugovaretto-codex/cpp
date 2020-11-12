@@ -44,7 +44,6 @@ void PrintIndices(Idx<I...>) {
     std::cout << std::endl;
 }
 #else
-
 template <typename T>
 void PrintIndicesHelper(T) {}
 

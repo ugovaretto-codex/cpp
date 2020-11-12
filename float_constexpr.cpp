@@ -12,7 +12,7 @@ using namespace std;
 
 //------------------------------------------------------------------------------
 // Convert 32 bit floating point number to 32 bit unsigned int. Can be used
-// in template parameter list or any other scope requiring a constexpr.
+// in template parameter lists or any other scope requiring a constexpr.
 // bits:
 // |31  |30........23|22.....0|
 //   ^        ^          ^

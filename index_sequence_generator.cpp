@@ -1,5 +1,5 @@
 //
-// Generate template index list with offset, C++ version >= 201103
+// Generate template index list with custom generator
 // Author: Ugo Varetto
 //
 
@@ -11,11 +11,7 @@ template <int S, template <int... I> class GenT, int... N>
 struct Sequence : Sequence<S - 1, GenT, N..., GenT<N...>::value> {};
 
 template <int... N>
-struct Idx {
-    const size_t size = sizeof...(N);
-    const int index[sizeof...(N)] = {N...};
-    int operator[](size_t i) const { return index[i]; }
-};
+struct Idx {};
 
 template <template <int... I> class GenT, int... N>
 struct Sequence<0, GenT, N...> {
@@ -71,16 +67,6 @@ struct Fibonacci {  // generate next number in Fibonacci sequence
     };
 };
 
-template <int... I>
-struct Remainder {  // generate next number in Fibonacci sequence
-    static_assert(sizeof...(I) > 1,
-                  "Remainder requirese sequenze size > 1");
-    enum : int {
-        value = Nth<sizeof...(I) - 2, I...>::value %
-                Nth<sizeof...(I) - 1, I...>::value
-    };
-};
-
 
 template <int Size, int Start = 0>
 using IndexSequence =
@@ -89,11 +75,6 @@ using IndexSequence =
 template <int Size>
 using FibonacciSequence =
     typename GenerateIndexSequence<Size, Fibonacci, 1, 1>::Type;
-
-template <int Size, int First, int Second>
-using RemainderSequence =
-    typename GenerateIndexSequence<Size, Remainder, First, Second>::Type;
-
 
 #if __cplusplus >= 201703L
 template <int... I>
@@ -120,11 +101,6 @@ void PrintIndices(Idx<I...>) {
 #endif
 
 int main(int argc, char const *argv[]) {
-    const auto IS = IndexSequence<10, 3>();
-    for (int i = 3; i != 10; ++i) {
-        // assert(IS[i - 3] == i);
-        std::cout << IS[i] << " ";
-    }
     std::cout << std::endl;
     const auto FS = FibonacciSequence<10>();
     PrintIndices(FS);
