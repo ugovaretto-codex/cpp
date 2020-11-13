@@ -109,6 +109,19 @@ void PrintBits(const T n, int start = 0, const int end = 8 * sizeof(T) - 1) {
     }
 }
 
+template <typename T, int...Separators>
+void PrintBitsSep(const T n) {
+    static_assert(is_integral<T>::value);
+    const int BITS = 8 * sizeof(T);
+    for (int i = BITS; i >= 0; --i) {
+        const int v = (n & (1 << i)) >> i;
+        cout << v;
+        if((... || (i == BITS - Separators))) {
+            cout << " ";
+        }
+    }
+}
+
 //------------------------------------------------------------------------------
 // WARNING: user defined literals for numeric types require the argument to
 // always be positive, use _nf for negative numbers
@@ -127,7 +140,7 @@ int main(int argc, char const *argv[]) {
     assert(fi.i == IntFloat(fi.f));
     cout << "float number: " << fi.f << endl;
     cout << "float bits:   ";
-    PrintBits(fi.i);
+    PrintBitsSep<decltype(fi.i), 0, 8>(fi.i);
     cout << endl;
     cout << "uint32_t:     " << fi.i << endl;
     Float<10.234_f> f;
